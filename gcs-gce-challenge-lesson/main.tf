@@ -5,19 +5,11 @@ resource "google_storage_bucket" "logs-bucket" {
   force_destroy = true
 }
 
-# data "google_iam_policy" "writer" {
-#   binding {
-#     role = "roles/storage.objectCreator"
-#     members = [
-#       "serviceAccount:${google_service_account.account.email}",
-#     ]
-#   }
-# }
-
-# resource "google_storage_bucket_iam_policy" "policy" {
-#   bucket      = google_storage_bucket.logs-bucket.name
-#   policy_data = data.google_iam_policy.writer.policy_data
-# }
+resource "google_storage_bucket_iam_member" "member" {
+  bucket = google_storage_bucket.logs-bucket.name
+  role   = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.account.email}"
+}
 
 resource "google_service_account" "account" {
   account_id   = "virtual-machine-account-id"
@@ -44,21 +36,19 @@ resource "google_compute_instance" "machine" {
     }
   }
 
-  #   metadata_startup_script = file("script.sh")
+  metadata_startup_script = file("script.sh")
 
   metadata = {
-    ssh-keys        = "${data.google_client_openid_userinfo.me.email}:ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHnXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX laurentvasseur@gmail.com"
-    lab-logs-bucket = google_storage_bucket.logs-bucket.name
+    ssh-keys        = "${data.google_client_openid_userinfo.me.email}:ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2x+idXXoYXV41TB4kZ/bn9FurtXa3LIQr+shtsoME/ vasseur.laurent@outlook.com"
+    lab-logs-bucket = "gs://${google_storage_bucket.logs-bucket.name}"
   }
 
-  #   metadata_startup_script = "echo hi > /test.txt"
-
   service_account {
-    # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
     email  = google_service_account.account.email
     scopes = ["cloud-platform"]
   }
   depends_on = [
-    google_storage_bucket.logs-bucket
+    google_storage_bucket.logs-bucket,
+    google_storage_bucket_iam_member.member
   ]
 }
