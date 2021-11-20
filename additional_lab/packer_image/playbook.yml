@@ -1,0 +1,31 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: install necessary packages
+      ansible.builtin.apt:
+        name: net-tools
+        state: present
+
+    - name: install apache
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - apache2
+          - apache2-utils
+
+    - name: enable apache service
+      ansible.builtin.service:
+        name: apache2
+        state: started
+        enabled: true
+
+    - name: install website
+      ansible.builtin.copy:
+        content: |
+          This is a custom content
+        dest: /var/www/html/index.html
+        mode: 0644
+        owner: www-data
